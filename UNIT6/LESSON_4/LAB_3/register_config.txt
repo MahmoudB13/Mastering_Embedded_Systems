@@ -1,0 +1,25 @@
+MCUCR offset 0x35
+int0 any logical change: ISC01: 0, ISC00: 1
+int1 rising edge: ISC11: 1, ISC10: 1
+0b1101
+
+MCUCSR offset 0x34
+int2 falling edge: ISC2: 0
+
+GICR offset 0x3b (INT EN)
+0b111 << 5
+
+GIFR offset 0x3A (INT F)
+bit 5: INTF2
+bit 6: INTF0
+bit 7: INTF1
+write 1 to clear
+
+SREG offset 0x3f
+bit 7: global int enable must be set to 1
+
+
+int rom location:
+int 0: 0x0002
+int 1: 0x0004
+int 2: 0x0006
