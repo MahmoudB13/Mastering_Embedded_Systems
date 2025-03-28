@@ -17,6 +17,13 @@
 
 //==============================================================
 
+//@REF POLLING_define:
+enum POLLING
+{
+	POLLING_ENABLE,
+	POLLING_DISABLE
+};
+
 //--------------------------------------------------------------
 //BASE ADDRESSES OF MEMORIES:
 //--------------------------------------------------------------
@@ -66,6 +73,9 @@
 //USART:
 #define USART1_BASE 								0x40013800UL
 
+//SPI:
+#define SPI1_BASE									0x40013000UL
+
 //--------------------------------------------------------------
 //BASE ADDRESSES OF APB1 PERIPHERALS:
 //--------------------------------------------------------------
@@ -73,6 +83,10 @@
 //USART:
 #define USART2_BASE 								0x40004400UL
 #define USART3_BASE 								0x40004800UL
+
+
+//SPI:
+#define SPI2_BASE									0x40003800UL
 
 //==============================================================
 
@@ -150,6 +164,22 @@ typedef struct
 
 //--------------------------------------------------------------
 
+//SPI REGISTERS:
+typedef struct
+{
+	volatile uint32_t CR1;
+	volatile uint32_t CR2;
+	volatile uint32_t SR;
+	volatile uint32_t DR;
+	volatile uint32_t CRCPR;
+	volatile uint32_t RXCRCR;
+	volatile uint32_t TXCRCR;
+	volatile uint32_t I2SCFGR;
+	volatile uint32_t I2SPR;
+}SPI_typedef;
+
+//--------------------------------------------------------------
+
 //NVIC REGISTERS:
 #define NVIC_ISER0									*((volatile uint32_t*)(NVIC_BASE+0x00))
 #define NVIC_ISER1									*((volatile uint32_t*)(NVIC_BASE+0x04))
@@ -174,16 +204,28 @@ typedef struct
 #define PORTD 										((GPIO_typedef*) PORTD_BASE)
 #define PORTE 										((GPIO_typedef*) PORTE_BASE)
 
+//--------------------------------------------------------------
+
 //EXTI:
 #define EXTI 										((EXTI_typedef*) EXTI_BASE)
 
+//--------------------------------------------------------------
+
 //AFIO:
 #define AFIO 										((AFIO_typedef*) AFIO_BASE)
+
+//--------------------------------------------------------------
 
 //USART:
 #define USART1 										((USART_typedef*) USART1_BASE)
 #define USART2 										((USART_typedef*) USART2_BASE)
 #define USART3 										((USART_typedef*) USART3_BASE)
+
+//--------------------------------------------------------------
+
+//SPI:
+#define SPI1 										((SPI_typedef*) SPI1_BASE)
+#define SPI2 										((SPI_typedef*) SPI2_BASE)
 
 //==============================================================
 
@@ -205,6 +247,8 @@ typedef struct
 //AFIO:
 #define RCC_AFIO_CLK_EN()							SET_BIT(RCC->APB2ENR,0)
 
+//--------------------------------------------------------------
+
 //GPIO:
 #define RCC_PORTA_CLK_EN()							SET_BIT(RCC->APB2ENR,2)
 #define RCC_PORTB_CLK_EN()							SET_BIT(RCC->APB2ENR,3)
@@ -212,10 +256,18 @@ typedef struct
 #define RCC_PORTD_CLK_EN()							SET_BIT(RCC->APB2ENR,5)
 #define RCC_PORTE_CLK_EN()							SET_BIT(RCC->APB2ENR,6)
 
+//--------------------------------------------------------------
+
 //USART:
 #define RCC_USART1_CLK_EN()							SET_BIT(RCC->APB2ENR,14)
 #define RCC_USART2_CLK_EN()							SET_BIT(RCC->APB1ENR,17)
 #define RCC_USART3_CLK_EN()							SET_BIT(RCC->APB1ENR,18)
+
+//--------------------------------------------------------------
+
+//SPI:
+#define RCC_SPI1_CLK_EN()							SET_BIT(RCC->APB2ENR,12)
+#define RCC_SPI2_CLK_EN()							SET_BIT(RCC->APB1ENR,14)
 
 //--------------------------------------------------------------
 //CLOCK RESET MACROS:
@@ -225,6 +277,12 @@ typedef struct
 #define RCC_USART1_CLK_RESET()						SET_BIT(RCC->APB2RSTR,14)
 #define RCC_USART2_CLK_RESET()						SET_BIT(RCC->APB1RSTR,17)
 #define RCC_USART3_CLK_RESET()						SET_BIT(RCC->APB1RSTR,18)
+
+//--------------------------------------------------------------
+
+//SPI:
+#define RCC_SPI1_CLK_RESET()						SET_BIT(RCC->APB2RSTR,12)
+#define RCC_SPI2_CLK_RESET()						SET_BIT(RCC->APB1RSTR,14)
 
 //==============================================================
 
@@ -261,7 +319,11 @@ typedef struct
 #define USART2_IRQ									38
 #define USART3_IRQ									39
 
+//--------------------------------------------------------------
 
+//SPI1->3:
+#define SPI1_IRQ									35
+#define SPI2_IRQ									36
 //==============================================================
 
 //--------------------------------------------------------------
@@ -284,6 +346,11 @@ typedef struct
 #define NVIC_USART2_IRQ_ENABLE						SET_BIT(NVIC_ISER1,(USART2_IRQ-32))
 #define NVIC_USART3_IRQ_ENABLE						SET_BIT(NVIC_ISER1,(USART3_IRQ-32))
 
+//--------------------------------------------------------------
+
+//SPI:
+#define NVIC_SPI1_IRQ_ENABLE						SET_BIT(NVIC_ISER1,(SPI1_IRQ-32))
+#define NVIC_SPI2_IRQ_ENABLE						SET_BIT(NVIC_ISER1,(SPI2_IRQ-32))
 
 //--------------------------------------------------------------
 //NVIC disable Macros:
@@ -304,6 +371,12 @@ typedef struct
 #define NVIC_USART1_IRQ_DISABLE						SET_BIT(NVIC_ICER1,(USART1_IRQ-32))
 #define NVIC_USART2_IRQ_DISABLE						SET_BIT(NVIC_ICER1,(USART2_IRQ-32))
 #define NVIC_USART3_IRQ_DISABLE						SET_BIT(NVIC_ICER1,(USART3_IRQ-32))
+
+//--------------------------------------------------------------
+
+//SPI:
+#define NVIC_SPI1_IRQ_DISABLE						SET_BIT(NVIC_ICER1,(SPI1_IRQ-32))
+#define NVIC_SPI2_IRQ_DISABLE						SET_BIT(NVIC_ICER1,(SPI2_IRQ-32))
 
 //==============================================================
 
