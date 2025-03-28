@@ -15,7 +15,16 @@
 //GENERIC VARIABLES:
 //==============================================================
 
-USART_Config_t *GLOBAL_UART_Config = NULL;
+USART_Config_t* GLOBAL_UART_Config = NULL;
+USART_Config_t* GLOBAL_UARTx_Config[3] = {NULL,NULL,NULL};
+
+//==============================================================
+//GENERIC VARIABLES:
+//==============================================================
+
+#define USART1_INDEX								0
+#define USART2_INDEX								1
+#define USART3_INDEX								2
 
 //==============================================================
 //APIs Supported by "MCAL USART DRIVER":
@@ -39,14 +48,17 @@ void MCAL_UART_Init(USART_typedef *USARTx,USART_Config_t *UART_Config)
 	//Enable the USART CLOCK:
 	if(USARTx==USART1)
 	{
+		GLOBAL_UARTx_Config[USART1_INDEX] = UART_Config;
 		RCC_USART1_CLK_EN();
 	}
 	else if(USARTx==USART2)
 	{
+		GLOBAL_UARTx_Config[USART2_INDEX] = UART_Config;
 		RCC_USART2_CLK_EN();
 	}
 	else if(USARTx==USART3)
 	{
+		GLOBAL_UARTx_Config[USART3_INDEX] = UART_Config;
 		RCC_USART3_CLK_EN();
 	}
 
@@ -100,6 +112,15 @@ void MCAL_UART_Init(USART_typedef *USARTx,USART_Config_t *UART_Config)
 	}
 }
 
+/*
+ * --------------------------------------------------------------
+ * FUNCTION:       MCAL_UART_DeInit
+ * DESCRIPTION:    De-initializes the specified USART instance.
+ * PARAMETER (IN): USARTx - Pointer to the USART instance (USART1, USART2, or USART3).
+ * RETURN VALUE:   void
+ * NOTES:          Resets the USART clock and disables its IRQ.
+ * --------------------------------------------------------------
+ */
 
 void MCAL_UART_DeInit(USART_typedef *USARTx)
 {
@@ -120,10 +141,21 @@ void MCAL_UART_DeInit(USART_typedef *USARTx)
 	}
 }
 
+/*
+ * --------------------------------------------------------------
+ * FUNCTION:       MCAL_UART_TRANSMIT
+ * DESCRIPTION:    Sends data via the specified USART instance.
+ * PARAMETER (IN): USARTx - Pointer to the USART instance.
+ * PARAMETER (IN): TX_Buffer - Pointer to the data buffer to be transmitted.
+ * PARAMETER (IN): POLLING_EN - Enum value indicating whether polling is enabled or disabled.
+ * RETURN VALUE:   void
+ * NOTES:          Supports both 8-bit and 9-bit data transmission.
+ * --------------------------------------------------------------
+ */
 
-void MCAL_UART_TRANSMIT(USART_typedef *USARTx,uint16_t *TX_Buffer)
+void MCAL_UART_TRANSMIT(USART_typedef *USARTx,uint16_t *TX_Buffer,enum POLLING POLLING_EN)
 {
-	if(GLOBAL_UART_Config->POLLING==POLING_ENABLE)
+	if(POLLING_EN == POLLING_ENABLE)
 	{
 		while(!(USARTx->SR & 1<<7));
 	}
@@ -138,9 +170,21 @@ void MCAL_UART_TRANSMIT(USART_typedef *USARTx,uint16_t *TX_Buffer)
 	}
 }
 
-void MCAL_UART_RECEIVE(USART_typedef *USARTx,uint16_t *RX_Buffer)
+/*
+ * --------------------------------------------------------------
+ * FUNCTION:        MCAL_UART_RECEIVE
+ * DESCRIPTION:     Receives data from the specified USART instance.
+ * PARAMETER (IN):  USARTx - Pointer to the USART instance.
+ * PARAMETER (OUT): RX_Buffer - Pointer to store the received data.
+ * PARAMETER (IN):  POLLING_EN - Enum value indicating whether polling is enabled or disabled.
+ * RETURN VALUE:    void
+ * NOTES:           Supports both 8-bit and 9-bit data reception with optional parity handling.
+ * --------------------------------------------------------------
+ */
+
+void MCAL_UART_RECEIVE(USART_typedef *USARTx,uint16_t *RX_Buffer,enum POLLING POLLING_EN)
 {
-	if(GLOBAL_UART_Config->POLLING==POLING_ENABLE)
+	if(POLLING_EN == POLLING_ENABLE)
 	{
 		while(!(USARTx->SR & 1<<5));
 	}
@@ -168,7 +212,15 @@ void MCAL_UART_RECEIVE(USART_typedef *USARTx,uint16_t *RX_Buffer)
 	}
 }
 
-
+/*
+ * --------------------------------------------------------------
+ * FUNCTION:       MCAL_UART_WAIT_TC
+ * DESCRIPTION:    Waits until the transmission is complete.
+ * PARAMETER (IN): USARTx - Pointer to the USART instance.
+ * RETURN VALUE:   void
+ * NOTES:          Blocks execution until the transmission complete (TC) flag is set.
+ * --------------------------------------------------------------
+ */
 
 void MCAL_UART_WAIT_TC(USART_typedef *USARTx)
 {
@@ -190,24 +242,27 @@ void MCAL_UART_GPIO_SET_PINS(USART_typedef *USARTx)
 	GPIO_PinConfig_t PIN_Config;
 	if(USARTx==USART1)
 	{
-		//TX
+		// Configure TX pin (PA9) as Alternate Function Push-Pull Output
 		PIN_Config.GPIO_PIN_NUMBER	= GPIO_PIN_9;
 		PIN_Config.GPIO_MODE = AFIO_MODE_OUT_PUSH_PULL;
 		PIN_Config.GPIO_OUTPUT_FREQ = GPIO_OUTPUT_FREQ_10MHz;
 		MCAL_GPIO_Init(PORTA,&PIN_Config);
 
-		//RX
+		// Configure RX pin (PA10) as Floating Input
 		PIN_Config.GPIO_PIN_NUMBER	= GPIO_PIN_10;
 		PIN_Config.GPIO_MODE = GPIO_MODE_FLOATING_INPUT;
 		MCAL_GPIO_Init(PORTA,&PIN_Config);
 
-		if(GLOBAL_UART_Config->FLOW_CONTROL==FLOW_CONTROL_CTS || GLOBAL_UART_Config->FLOW_CONTROL==FLOW_CONTROL_CTS_RTS)
+		// Configure CTS (PA11) if flow control is enabled
+		if(GLOBAL_UARTx_Config[USART1_INDEX]->FLOW_CONTROL==FLOW_CONTROL_CTS || GLOBAL_UARTx_Config[USART1_INDEX]->FLOW_CONTROL==FLOW_CONTROL_CTS_RTS)
 		{
 			PIN_Config.GPIO_PIN_NUMBER	= GPIO_PIN_11;
 			PIN_Config.GPIO_MODE = GPIO_MODE_FLOATING_INPUT;
 			MCAL_GPIO_Init(PORTA,&PIN_Config);
 		}
-		else if(GLOBAL_UART_Config->FLOW_CONTROL==FLOW_CONTROL_RTS || GLOBAL_UART_Config->FLOW_CONTROL==FLOW_CONTROL_CTS_RTS)
+
+		// Configure RTS (PA12) if flow control is enabled
+		if(GLOBAL_UARTx_Config[USART1_INDEX]->FLOW_CONTROL==FLOW_CONTROL_RTS || GLOBAL_UARTx_Config[USART1_INDEX]->FLOW_CONTROL==FLOW_CONTROL_CTS_RTS)
 		{
 			PIN_Config.GPIO_PIN_NUMBER	= GPIO_PIN_12;
 			PIN_Config.GPIO_MODE = AFIO_MODE_OUT_PUSH_PULL;
@@ -217,23 +272,27 @@ void MCAL_UART_GPIO_SET_PINS(USART_typedef *USARTx)
 	}
 	else if(USARTx==USART2)
 	{
-		//TX
+		// Configure TX pin (PA2) as Alternate Function Push-Pull Output
 		PIN_Config.GPIO_PIN_NUMBER	= GPIO_PIN_2;
 		PIN_Config.GPIO_MODE = AFIO_MODE_OUT_PUSH_PULL;
 		PIN_Config.GPIO_OUTPUT_FREQ = GPIO_OUTPUT_FREQ_10MHz;
 		MCAL_GPIO_Init(PORTA,&PIN_Config);
 
-		//RX
+		// Configure RX pin (PA3) as Floating Input
 		PIN_Config.GPIO_PIN_NUMBER	= GPIO_PIN_3;
 		PIN_Config.GPIO_MODE = GPIO_MODE_FLOATING_INPUT;
 		MCAL_GPIO_Init(PORTA,&PIN_Config);
-		if(GLOBAL_UART_Config->FLOW_CONTROL==FLOW_CONTROL_CTS || GLOBAL_UART_Config->FLOW_CONTROL==FLOW_CONTROL_CTS_RTS)
+
+		// Configure CTS (PA0) if flow control is enabled
+		if(GLOBAL_UARTx_Config[USART2_INDEX]->FLOW_CONTROL==FLOW_CONTROL_CTS || GLOBAL_UARTx_Config[USART2_INDEX]->FLOW_CONTROL==FLOW_CONTROL_CTS_RTS)
 		{
 			PIN_Config.GPIO_PIN_NUMBER	= GPIO_PIN_0;
 			PIN_Config.GPIO_MODE = GPIO_MODE_FLOATING_INPUT;
 			MCAL_GPIO_Init(PORTA,&PIN_Config);
 		}
-		else if(GLOBAL_UART_Config->FLOW_CONTROL==FLOW_CONTROL_RTS || GLOBAL_UART_Config->FLOW_CONTROL==FLOW_CONTROL_CTS_RTS)
+
+		// Configure RTS (PA1) if flow control is enabled
+		if(GLOBAL_UARTx_Config[USART2_INDEX]->FLOW_CONTROL==FLOW_CONTROL_RTS || GLOBAL_UARTx_Config[USART2_INDEX]->FLOW_CONTROL==FLOW_CONTROL_CTS_RTS)
 		{
 			PIN_Config.GPIO_PIN_NUMBER	= GPIO_PIN_1;
 			PIN_Config.GPIO_MODE = AFIO_MODE_OUT_PUSH_PULL;
@@ -243,23 +302,27 @@ void MCAL_UART_GPIO_SET_PINS(USART_typedef *USARTx)
 	}
 	else if(USARTx==USART3)
 	{
-		//TX
+		// Configure TX pin (PB10) as Alternate Function Push-Pull Output
 		PIN_Config.GPIO_PIN_NUMBER	= GPIO_PIN_10;
 		PIN_Config.GPIO_MODE = AFIO_MODE_OUT_PUSH_PULL;
 		PIN_Config.GPIO_OUTPUT_FREQ = GPIO_OUTPUT_FREQ_10MHz;
 		MCAL_GPIO_Init(PORTB,&PIN_Config);
 
-		//RX
+		// Configure RX pin (PB11) as Floating Input
 		PIN_Config.GPIO_PIN_NUMBER	= GPIO_PIN_11;
 		PIN_Config.GPIO_MODE = GPIO_MODE_FLOATING_INPUT;
 		MCAL_GPIO_Init(PORTB,&PIN_Config);
-		if(GLOBAL_UART_Config->FLOW_CONTROL==FLOW_CONTROL_CTS || GLOBAL_UART_Config->FLOW_CONTROL==FLOW_CONTROL_CTS_RTS)
+
+		// Configure CTS (PB13) if flow control is enabled
+		if(GLOBAL_UARTx_Config[USART3_INDEX]->FLOW_CONTROL==FLOW_CONTROL_CTS || GLOBAL_UARTx_Config[USART3_INDEX]->FLOW_CONTROL==FLOW_CONTROL_CTS_RTS)
 		{
 			PIN_Config.GPIO_PIN_NUMBER	= GPIO_PIN_13;
 			PIN_Config.GPIO_MODE = GPIO_MODE_FLOATING_INPUT;
 			MCAL_GPIO_Init(PORTB,&PIN_Config);
 		}
-		else if(GLOBAL_UART_Config->FLOW_CONTROL==FLOW_CONTROL_RTS || GLOBAL_UART_Config->FLOW_CONTROL==FLOW_CONTROL_CTS_RTS)
+
+		// Configure RTS (PB14) if flow control is enabled
+		if(GLOBAL_UARTx_Config[USART3_INDEX]->FLOW_CONTROL==FLOW_CONTROL_RTS || GLOBAL_UARTx_Config[USART3_INDEX]->FLOW_CONTROL==FLOW_CONTROL_CTS_RTS)
 		{
 			PIN_Config.GPIO_PIN_NUMBER	= GPIO_PIN_14;
 			PIN_Config.GPIO_MODE = AFIO_MODE_OUT_PUSH_PULL;
@@ -269,16 +332,44 @@ void MCAL_UART_GPIO_SET_PINS(USART_typedef *USARTx)
 	}
 }
 
+/*
+ * --------------------------------------------------------------
+ * FUNCTION:       USART1_IRQHandler
+ * DESCRIPTION:    Interrupt handler for USART1.
+ * RETURN VALUE:   void
+ * NOTES:          Calls the user-defined IRQ callback function.
+ * --------------------------------------------------------------
+ */
 
 void USART1_IRQHandler(void)
 {
-	GLOBAL_UART_Config->PF_IRQ_CallBack();
+	GLOBAL_UARTx_Config[USART1_INDEX]->PF_IRQ_CallBack();
 }
+
+/*
+ * --------------------------------------------------------------
+ * FUNCTION:       USART2_IRQHandler
+ * DESCRIPTION:    Interrupt handler for USART2.
+ * RETURN VALUE:   void
+ * NOTES:          Calls the user-defined IRQ callback function.
+ * --------------------------------------------------------------
+ */
+
 void USART2_IRQHandler(void)
 {
-	GLOBAL_UART_Config->PF_IRQ_CallBack();
+	GLOBAL_UARTx_Config[USART2_INDEX]->PF_IRQ_CallBack();
 }
+
+/*
+ * --------------------------------------------------------------
+ * FUNCTION:       USART3_IRQHandler
+ * DESCRIPTION:    Interrupt handler for USART3.
+ * RETURN VALUE:   void
+ * NOTES:          Calls the user-defined IRQ callback function.
+ * --------------------------------------------------------------
+ */
+
 void USART3_IRQHandler(void)
 {
-	GLOBAL_UART_Config->PF_IRQ_CallBack();
+	GLOBAL_UARTx_Config[USART3_INDEX]->PF_IRQ_CallBack();
 }
